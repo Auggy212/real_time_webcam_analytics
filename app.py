@@ -85,8 +85,11 @@ class VideoProcessor(VideoTransformerBase):
 ctx = webrtc_streamer(
     key="tracker",
     video_processor_factory=VideoProcessor,
+    rtc_configuration={
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    },
     media_stream_constraints={"video": True, "audio": False},
-    async_processing=True
+    async_processing=True,
 )
 
 # Show stats
