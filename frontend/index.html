@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Webcam Frame Sender</title>
+  <style>
+    video {
+      border: 2px solid #000;
+      border-radius: 10px;
+      width: 480px;
+      height: 360px;
+    }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Live Webcam Feed (Streaming to Flask API)</h2>
+  <video id="video" autoplay playsinline></video>
+  <p id="status">Status: Not started</p>
+
+  <script>
+    const video = document.getElementById('video');
+    const statusText = document.getElementById('status');
+
+    async function startVideoStream() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        // Send frame every 500ms (~2 FPS)
+        setInterval(() => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('frame', blob, 'frame.jpg');
+
+            fetch('http://localhost:8000/analyze', {
+              method: 'POST',
+              body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+              statusText.textContent = `Status: Face: ${data.metrics.face_visible}, Centered: ${data.metrics.body_centered}, Posture: ${data.metrics.posture_alignment_percent}%`;
+            })
+            .catch(err => {
+              console.error('Error:', err);
+              statusText.textContent = 'Error sending frame';
+            });
+          }, 'image/jpeg', 0.8);
+        }, 500);
+      } catch (err) {
+        console.error('Failed to access webcam:', err);
+        statusText.textContent = 'Webcam access denied or error';
+      }
+    }
+
+    startVideoStream();
+  </script>
+</body>
+</html>
